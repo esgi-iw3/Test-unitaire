@@ -34,6 +34,8 @@ class Exchange
         $this->dateDebut = $dateDebut;
         $this->dateFin = $dateFin;
         $this->email = $email;
+        $this->database = new DBConnection();
+        $this->emailSender = new EmailSender();
     }
 
     public function isValid()
@@ -45,10 +47,14 @@ class Exchange
     }
 
 
-    function validateDate($date, $format = 'd-m-Y')
+    public function validateDate($date, $format = 'd-m-Y')
     {
         $d = DateTime::createFromFormat($format, $date);
         return $d && $d->format($format) == $date;
+    }
+
+    public function save(){
+
     }
 
     /**
