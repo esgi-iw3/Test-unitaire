@@ -6,6 +6,8 @@
  * Time: 18:56
  */
 
+use PHPUnit\Framework\TestCase;
+
 require 'User.php';
 
 class Product

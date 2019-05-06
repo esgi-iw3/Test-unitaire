@@ -9,6 +9,7 @@
 use PHPUnit\Framework\TestCase;
 
 require 'Product.php';
+require 'User.php';
 
 class ProductTest extends TestCase
 {
@@ -35,8 +36,18 @@ class ProductTest extends TestCase
     /**
      * @covers Product::isValid
      */
-    public function testisNotValidBecauseUser() {
+    public function testisNotValidBecauseUserToYoung() {
         $user = new User("test@test.fr", "test", "boris", 6);
+        $product = new Product("object2", $user);
+        $result = $product->isValid();
+        $this->assertFalse($result);
+    }
+
+    /**
+     * @covers Product::isValid
+     */
+    public function testisNotValidBecauseUserEmail() {
+        $user = new User("test.fr", "test", "boris", 20);
         $product = new Product("object2", $user);
         $result = $product->isValid();
         $this->assertFalse($result);

@@ -38,4 +38,16 @@ class UserTest extends TestCase
         $this->assertFalse($result);
     }
 
+    public function testIsNoActiveBecauseLastnameIsInvalid(){
+        $user = new User("test.fr", "", "toto", 20);
+        $result = $user->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testIsNoActiveBecauseAgeIsString(){
+        $user = new User("test.fr", "toto", "", "20");
+        $result = $user->isValid();
+        $this->assertFalse($result);
+    }
+
 }
