@@ -15,7 +15,7 @@ class Exchange
 {
 
     private $receiver, $product, $owner, $dateDebut = '', $dateFin = '',
-            $email, $database, $emailSender;
+            $database, $emailSender;
 
     /**
      * Exchange constructor.
@@ -24,16 +24,14 @@ class Exchange
      * @param $owner
      * @param $dateDebut
      * @param $dateFin
-     * @param $email
      */
-    public function __construct($receiver, $product, $owner, $dateDebut, $dateFin, $email)
+    public function __construct($receiver, $product, $owner, $dateDebut, $dateFin)
     {
         $this->receiver = $receiver;
         $this->product = $product;
         $this->owner = $owner;
         $this->dateDebut = $dateDebut;
         $this->dateFin = $dateFin;
-        $this->email = $email;
         $this->database = new DBConnection();
         $this->emailSender = new EmailSender();
     }
@@ -54,7 +52,20 @@ class Exchange
     }
 
     public function save(){
+        /*$db = $this->database;
+        $userReceiver = new User("test@test.fr", "test", "boris", 20);*/
 
+        $exchange = new Exchange($this->receiver, $this->product, $this->owner, $this->dateDebut, $this->dateFin);
+
+        if($this->receiver->getAge() < 18){
+            $emailReceiver = $this->receiver->getEmail();
+            $messageContent = "Vous ne pouvez pas enregistrer l'exchange, vous n'êtes pas majeur";
+
+            $this->emailSender->sendEmail($emailReceiver, $messageContent);
+
+        } else {
+            $this->database->saveExchange($exchange);
+        }
     }
 
     /**
@@ -136,21 +147,4 @@ class Exchange
     {
         $this->dateFin = $dateFin;
     }
-
-    /**
-     * @return mixed
-     */
-    public function getEmail()
-    {
-        return $this->email;
-    }
-
-    /**
-     * @param mixed $email
-     */
-    public function setEmail($email): void
-    {
-        $this->email = $email;
-    }
-
 }
