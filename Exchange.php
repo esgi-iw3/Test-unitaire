@@ -6,40 +6,36 @@
  * Time: 21:14
  */
 
-require 'DBConnection.php';
-require 'EmailSender.php';
-require 'User.php';
-require 'Product.php';
+require_once('User.php');
+require_once('Product.php');
 
 class Exchange
 {
 
-    private $receiver, $product, $owner, $dateDebut = '', $dateFin = '',
+    private $receiver, $product, $dateDebut, $dateFin,
             $database, $emailSender;
 
     /**
      * Exchange constructor.
      * @param $receiver
      * @param $product
-     * @param $owner
      * @param $dateDebut
      * @param $dateFin
      */
-    public function __construct($receiver, $product, $owner, $dateDebut, $dateFin)
+    public function __construct($receiver, $product,  $dateDebut, $dateFin, $emailSender, $database)
     {
         $this->receiver = $receiver;
         $this->product = $product;
-        $this->owner = $owner;
         $this->dateDebut = $dateDebut;
         $this->dateFin = $dateFin;
-        $this->database = new DBConnection();
-        $this->emailSender = new EmailSender();
+        $this->database = $database;
+        $this->emailSender = $emailSender;
     }
 
     public function isValid()
     {
-        return isset($this->owner) && isset($this->receiver) && isset($this->product)
-                && $this->owner->isValid() && $this->receiver->isValid() && $this->product->isValid()
+        return  isset($this->receiver) && isset($this->product)
+                && $this->receiver->isValid() && $this->product->isValid()
                 && validateDate($this->dateDebut)  && $this->dateDebut >  date('d-m-Y')
                 && validateDate($this->dateFin) && $this->dateFin > $this->dateDebut;
     }
@@ -52,19 +48,17 @@ class Exchange
     }
 
     public function save(){
-        /*$db = $this->database;
-        $userReceiver = new User("test@test.fr", "test", "boris", 20);*/
-
-        $exchange = new Exchange($this->receiver, $this->product, $this->owner, $this->dateDebut, $this->dateFin);
-
-        if($this->receiver->getAge() < 18){
-            $emailReceiver = $this->receiver->getEmail();
-            $messageContent = "Vous ne pouvez pas enregistrer l'exchange, vous n'êtes pas majeur";
-
-            $this->emailSender->sendEmail($emailReceiver, $messageContent);
-
-        } else {
-            $this->database->saveExchange($exchange);
+        if($this->isValid())
+        {
+            if($this->receiver->isMinor()){
+                $emailReceiver = $this->receiver->getEmail();
+                $messageContent = "Vous ne pouvez pas enregistrer l'exchange, vous n'êtes pas majeur";
+    
+                $this->emailSender->sendEmail($emailReceiver, $messageContent);
+    
+            } else {
+                $this->database->saveExchange($this);
+            }
         }
     }
 
@@ -98,22 +92,6 @@ class Exchange
     public function setProduct($product): void
     {
         $this->product = $product;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getOwner()
-    {
-        return $this->owner;
-    }
-
-    /**
-     * @param mixed $owner
-     */
-    public function setOwner($owner): void
-    {
-        $this->owner = $owner;
     }
 
     /**

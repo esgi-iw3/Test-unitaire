@@ -31,6 +31,15 @@ class User
             && $this->age >= 13;
     }
 
+    function isMinor()
+    {
+        if($this->age<18)
+        {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * @return mixed
      */
