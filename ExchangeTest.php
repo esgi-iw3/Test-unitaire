@@ -17,102 +17,168 @@ require_once('EmailSender.php');
 class ExchangeTest extends TestCase
 {
     private $exchange;
+    private $dateDebut;
+    private $dateFin;
+    private $mockedReceiver;
+    private $mockedOwner;
+    private $mockedProduct;
+    private $mockedEmailSender;
+    private $mockedConnexion;
 
-    //A FINIR
+    public function testSave(){
+        $result = $this->exchange->save();
+        $this->assertTrue($result);
+    }
 
+    public function testSaveProductNotValid()
+    {
+        $mockedProductNotValid = $this->createMock(Product::class, array('isValid'), array(null, null));
+        $mockedProductNotValid->expects($this->any())->method('isValid')->will($this->returnValue(false));
+
+        $this->exchange->setProduct($mockedProductNotValid);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveReceiverNotValid()
+    {
+        $mockedReceiverNotValid = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
+        $mockedReceiverNotValid->expects($this->any())->method('isValid')->will($this->returnValue(false));
+
+        $this->exchange->setReceiver($mockedReceiverNotValid);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveOwnerNotValid()
+    {
+        $mockedOwnerNotValid = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
+        $mockedOwnerNotValid->expects($this->any())->method('isValid')->will($this->returnValue(false));
+
+        $this->mockedProduct->setOwner($mockedOwnerNotValid);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveDateDebutNotValid(){
+        $dateDebutNotValid = "test";
+
+        $this->exchange->setDateDebut($dateDebutNotValid);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveDateFinNotValid(){
+        $dateFinNotValid = "test2";
+
+        $this->exchange->setDateFin($dateFinNotValid);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveDateDebutNotValidBecauseLowerDateNow()
+    {
+        $dateDebutNotValidBecauseLowerDateNow = new DateTime("2019-01-01");
+
+        $this->exchange->setDateDebut($dateDebutNotValidBecauseLowerDateNow);
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveDateDebutNotValidBecauseGreaterDateFin()
+    {
+        $dateDebutNotValidBecauseGreaterDateFin = new DateTime("2019-05-25");
+        $dateFinNotValidBecauseLowerDateDebut = new DateTime("2019-05-20");
+
+        $this->exchange->setDateDebut($dateDebutNotValidBecauseGreaterDateFin);
+        $this->exchange->setDatFin($dateFinNotValidBecauseLowerDateDebut);
+
+        $result = $this->exchange->isValid();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveWhenSaveExchangeNotWorkBecauseDBConnection()
+    {
+        $this->mockedConnexion = $this->createMock(DBConnection::class, array('saveExchange'), array(null));
+        $this->mockedConnexion->expects($this->any())->method('saveExchange')->will($this->returnSelf(false));
+
+        $this->saveExchange();
+
+        $result = $this->exchange->save();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveWhenReceiverIsMinorMailWillSend()
+    {
+        $mockedReceiverMinor = $this->createMock(User::class, array('isValid'), array(null, null, null, 15));
+        $mockedReceiverMinor->expects($this->any())->method('isValid')->will($this->returnValue(true));
+
+        $this->mockedReceiver->setReceiver($mockedReceiverMinor);
+        $result = $this->exchange->save();
+        $this->assertTrue($result);
+    }
+
+    public function testSaveWhenReceiverIsNotMinorMailWillNotSend()
+    {
+        $mockedReceiverNotMinor = $this->createMock(User::class, array('isValid'), array(null, null, null, 25));
+        $mockedReceiverNotMinor->expects($this->any())->method('isValid')->will($this->returnValue(true));
+
+        $this->mockedReceiver->setReceiver($mockedReceiverNotMinor);
+        $result = $this->exchange->save();
+        $this->assertFalse($result);
+    }
+
+    public function testSaveWhenReceiverIsMinorMailWillSendButEmailSenderNotWork()
+    {
+        $this->mockedReceiver = $this->createMock(User::class, array('isValid'), array(null, null, null, 15));
+        $this->mockedReceiver->expects($this->any())->method('isValid')->will($this->returnValue(true));
+
+
+        $this->mockedEmailSender = $this->createMock(EmailSender::class, array('sendEmail'), array(null, null));
+        $this->mockedEmailSender->expects($this->any())->method('sendEmail')->will($this->returnSelf(false));
+
+        $this->saveExchange();
+        $result = $this->exchange->save();
+        $this->assertFalse($result);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     protected function setUp(): void
     {
-        $this->mockedReceiver = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
-        $this->mockedReceiver->expects($this->any())->method('isValid')->will($this->returnValue(true));
-        $this->mockedReceiver->expects($this->any())->method('isMinor')->will($this->returnValue(false));
+        $mockedReceiver = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
+        $mockedReceiver->expects($this->any())->method('isValid')->will($this->returnValue(true));
+        //$this->mockedReceiver->expects($this->any())->method('isMinor')->will($this->returnValue(false));
 
-        $this->mockedOwner = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
-        $this->mockedOwner->expects($this->any())->method('isValid')->will($this->returnValue(true));
+        $mockedOwner = $this->createMock(User::class, array('isValid'), array(null, null, null, null));
+        $mockedOwner->expects($this->any())->method('isValid')->will($this->returnValue(true));
 
+        $mockedProduct = $this->createMock(Product::class, array('isValid'), array(null, $this->mockedOwner));
+        $mockedProduct->expects($this->any())->method('isValid')->will($this->returnValue(true));
 
-        $this->makeEmailSender = $this->createMock(EmailSender::class,array('sendEmail'), array(null, null));
-        $this->makeEmailSender->expects($this->any())->method('sendEmail')->will($this->returnSelf(true));
+        //renvoie une référence à l'objet stubbed
+        $mockedEmailSender = $this->createMock(EmailSender::class, array('sendEmail'), array(null, null));
+        $mockedEmailSender->expects($this->any())->method('sendEmail')->will($this->returnSelf(true));
 
-        $this->makeConnexion = $this->createMock(DatabaseConnection::class,array('saveExchange'), array(null));
-        $this->makeConnexion->expects($this->any())->method('saveExchange')->will($this->returnSelf(true));
+        $mockedConnexion = $this->createMock(DBConnection::class, array('saveExchange'), array(null));
+        $mockedConnexion->expects($this->any())->method('saveExchange')->will($this->returnSelf(true));
 
-        $this->mockedProduct = $this->createMock(Product::class, array('isValid'), array(null, $this->mockedOwner));
-        $this->mockedProduct->expects($this->any())->method('isValid')->will($this->returnValue(true));
+        $this->dateDebut = new DateTime("2019-05-09");
+        $this->dateFin= new DateTime("2019-05-20");
 
-        $this->dateStart = new DateTime("2019-05-08");
-        $this->dateEnd= new DateTime("2019-05-20");
-        $this->saveExchange();
+        $this->exchange = new Exchange($this->mockedReceiver, $this->mockedProduct, $this->dateDebut, $this->dateFin, $this->mockedEmailSender, $this->mockedConnexion);
+
+    }
+
+    public function saveExchange()
+    {
+        $this->exchange = new Exchange($this->mockedReceiver, $this->mockedProduct, $this->dateDebut, $this->dateFin, $this->mockedEmailSender,$this->mockedConnexion);
     }
 
     protected function tearDown(): void
     {
         $this->exchange = NULL;
     }
-    
-    public function saveExchange()
-    {
-        $this->exchange = new Exchange($this->mockedReceiver, $this->mockedProduct, $this->dateStart, $this->dateEnd, $this->makeEmailSender,$this->makeConnexion);
-    }
-
-    public function testSaveProductNotValid()
-    {
-        $this->makeProduct->method('isValid')->willReturn(false);
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->isValid());
-
-    }
-
-    public function testSaveReceiverValid()
-    {
-        $this->mockedReceiver->method('isValid')->willReturn(false);
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->isValid());
-
-    }
-
-    public function testSaveOwnerValid()
-    {
-        $this->mockedOwner->method('isValid')->willReturn(false);
-        $this->mockedProduct->setOwner($this->mockedOwner);
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->isValid());
-
-    }
-
-    public function testSaveWehnSaveExchangeWork()
-    {
-        $this->assertFalse( $this->exchange->save());
-    }
-
-    public function testSaveWehnSaveExchangeNoWork()
-    {
-        $this->makeConnexion->expects($this->any())->method('saveExchange')->will($this->returnSelf(false));
-        
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->save());
-    }
-
-    public function testSaveWhenReceiverIsMinorMailWillSend()
-    {
-        $this->mockedReceiver->expects($this->any())->method('isValid')->will($this->returnValue(true));
-        $this->mockedReceiver->expects($this->any())->method('isMinor')->will($this->returnValue(true));
-
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->save());
-
-    }
-
-    public function testSaveWhenReceiverIsMinorMailWillNotSend()
-    {
-        $this->mockedReceiver->expects($this->any())->method('isValid')->will($this->returnValue(true));
-        $this->mockedReceiver->expects($this->any())->method('isMinor')->will($this->returnValue(true));
-        $this->makeEmailSender = $this->createMock(EmailSender::class,array('sendEmail'), array(null, null));
-        $this->makeEmailSender->expects($this->any())->method('sendEmail')->will($this->returnSelf(false));
-
-        $this->saveExchange();
-        $this->assertFalse( $this->exchange->save());
-
-    }
-
 
 }
